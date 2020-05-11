@@ -1,0 +1,166 @@
+$(document).ready(function () {
+
+	document.getElementById('mydiv__chatbox').innerHTML =
+		"<div class='chatbox chatbox--tray'>" +
+		"<div class='chatbox__title'><h6><a href='#'>Customer Service</a></h6>" +
+		"<button class='chatbox__title__tray'><span></span></button>" +
+		"<button class='chatbox__title__close'>" +
+		"<span>" +
+		"<svg viewBox='0 0 12 12' width='12px' height='12px'>" +
+		"<line stroke='#FFFFFF' x1='11.75' y1='0.25' x2='0.25' y2='11.75'></line>" +
+		"<line stroke='#FFFFFF' x1='11.75' y1='11.75' x2='0.25' y2='0.25'></line>" +
+		"</svg>" +
+		"</span>" +
+		"</button>" +
+		"</div>" +
+		"<div class='chatbox__body' id = 'grid-partial'>" +
+		"</div >" +
+		"<div class='input-group'>" +
+		"<input id='btn-input-message' type='text' class='form-control input-sm chat_input' placeholder='พิมพ์ข้อความ...'>" +
+		"<span class='input-group-addon text-center' id='btnSend'><i class='fas fa-paper-plane text-primary'></i></span>" +
+		"</div>" +
+		"</div>";
+
+	var $chatbox = $('.chatbox'),
+		$chatboxTitle = $('.chatbox__title'),
+		$chatboxTitleClose = $('.chatbox__title__close')
+	$chatboxTitle.on('click', function () {
+		$chatbox.toggleClass('chatbox--tray');
+
+		loadMessage();
+	});
+	$chatboxTitleClose.on('click', function (e) {
+		e.stopPropagation();
+		$chatbox.addClass('chatbox--closed');
+	});
+	$chatbox.on('transitionend', function () {
+		if ($chatbox.hasClass('chatbox--closed')) $chatbox.remove();
+	});
+
+	$('#btnSend').on('click touch', function (e) {
+		e.preventDefault();
+
+		var Message = $('#btn-input-message').val();
+		if (!$('#btn-input-message').val()) Message = null;
+		target =
+		{
+			"id": 0,
+			"master_id": 1,
+			"user_id": 1,
+			"name": "User",
+			"stage_id": stage,
+			"message": Message,
+		}
+
+		if (Message != null) {
+			$.ajax({
+				type: "POST",
+				url: baseUrl + "Message/PostMessage",
+				dataType: "json",
+				contentType: 'application/json',
+				headers: {
+					'Access-Control-Allow-Origin': '*',
+				},
+				data: JSON.stringify(target),
+				cache: false,
+				success: function (data) {
+					if (data) {
+						$('#btn-input-message').val(null);
+
+						if (data.master_id == 1 && data.user_id == 1) {
+							$("#grid-partial").append('<div class="chatbox__body__message chatbox__body__message--right"><img src="https://s3.amazonaws.com/uifaces/faces/twitter/arashmil/128.jpg" alt="Picture"><p>' + data.message + '</p></div >');
+							stage = data.stage_id;
+						} else {
+							$("#grid-partial").append('<div class="chatbox__body__message chatbox__body__message--left"><img src="https://s3.amazonaws.com/uifaces/faces/twitter/brad_frost/128.jpg" alt="Picture"><p>' + data.message + '</p></div >');
+							stage = data.stage_id;
+						}
+						AnimationScroll();
+
+						setTimeout(function () {
+							BotSendMessage(data);
+						}, 3000);
+					}
+				},
+			});
+		}
+	});
+
+	var input = document.getElementById("btn-input-message");
+
+	input.addEventListener("keyup", function (event) {
+		// Number 13 is the "Enter" key on the keyboard
+		if (event.keyCode === 13) {
+			// Cancel the default action, if needed
+			event.preventDefault();
+			// Trigger the button element with a click
+			document.getElementById("btnSend").click();
+		}
+	});
+
+	function BotSendMessage(data) {
+
+		$.ajax({
+			type: "POST",
+			url: baseUrl + "Message/BotPostMessage",
+			dataType: "json",
+			contentType: 'application/json',
+			data: JSON.stringify(data),
+			cache: false,
+			success: function (data) {
+				if (data.id > 0) {
+					$('#btn-input-message').val(null);
+
+					if (data.master_id == 1 && data.user_id == 1) {
+						$("#grid-partial").append('<div class="chatbox__body__message chatbox__body__message--right"><img src="https://s3.amazonaws.com/uifaces/faces/twitter/arashmil/128.jpg" alt="Picture"><p>' + data.message + '</p></div >');
+						stage = data.stage_id;
+					} else {
+						$("#grid-partial").append('<div class="chatbox__body__message chatbox__body__message--left"><img src="https://s3.amazonaws.com/uifaces/faces/twitter/brad_frost/128.jpg" alt="Picture"><p>' + data.message + '</p></div >');
+						stage = data.stage_id;
+					}
+
+					AnimationScroll();
+
+					setTimeout(function () {
+						loadMessage();
+					}, 3000);
+				}
+			},
+		});
+	}
+
+	function loadMessage() {
+
+		target = { "master_id": 1 }
+
+		$.ajax({
+			type: "POST",
+			url: baseUrl + "Message/FilterMessage",
+			dataType: "json",
+			contentType: 'application/json',
+			data: JSON.stringify(target),
+			cache: false,
+			success: function (data) {
+				if (data) {
+
+					$("#grid-partial").empty();
+					$('#btn-input-message').val(null);
+					$.each(data, function (e, val) {
+						if (val.master_id == 1 && val.user_id == 1) {
+							$("#grid-partial").append('<div class="chatbox__body__message chatbox__body__message--right"><img src="https://s3.amazonaws.com/uifaces/faces/twitter/arashmil/128.jpg" alt="Picture"><p>' + val.message + '</p></div >');
+							stage = val.stage_id;
+						} else {
+							$("#grid-partial").append('<div class="chatbox__body__message chatbox__body__message--left"><img src="https://s3.amazonaws.com/uifaces/faces/twitter/brad_frost/128.jpg" alt="Picture"><p>' + val.message + '</p></div >');
+							stage = val.stage_id;
+						}
+					});
+
+					AnimationScroll();
+				}
+			},
+		});
+	}
+
+	function AnimationScroll() {
+		$('#grid-partial').scrollTop($('#grid-partial')[0].scrollHeight);
+	}
+});
